@@ -301,14 +301,13 @@ def get_loader(dataset, sampler, batch_size, shuffle=True):
     return loader_train
 
 
-def create_loader():
+def create_loader(dataset):
     """
     Create data loader object
 
     Returns: List of PyTorch data loaders
 
     """
-    dataset = create_dataset()
     # train loader
     if cfg.dataset.task == 'graph':
         id = dataset.data['train_graph_index']

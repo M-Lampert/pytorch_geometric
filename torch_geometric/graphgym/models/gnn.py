@@ -91,14 +91,14 @@ class FeatureEncoder(nn.Module):
     Args:
         dim_in (int): Input feature dimension
     """
-    def __init__(self, dim_in):
+    def __init__(self, dim_in, dataset):
         super().__init__()
         self.dim_in = dim_in
         if cfg.dataset.node_encoder:
             # Encode integer node features via nn.Embeddings
             NodeEncoder = register.node_encoder_dict[
                 cfg.dataset.node_encoder_name]
-            self.node_encoder = NodeEncoder(cfg.gnn.dim_inner)
+            self.node_encoder = NodeEncoder(cfg.gnn.dim_inner, dataset)
             if cfg.dataset.node_encoder_bn:
                 self.node_encoder_bn = BatchNorm1dNode(
                     new_layer_config(cfg.gnn.dim_inner, -1, -1, has_act=False,
@@ -131,12 +131,12 @@ class GNN(nn.Module):
         dim_out (int): Output dimension
         **kwargs (optional): Optional additional args
     """
-    def __init__(self, dim_in, dim_out, **kwargs):
+    def __init__(self, dim_in, dim_out, dataset, **kwargs):
         super().__init__()
         GNNStage = register.stage_dict[cfg.gnn.stage_type]
         GNNHead = register.head_dict[cfg.gnn.head]
 
-        self.encoder = FeatureEncoder(dim_in)
+        self.encoder = FeatureEncoder(dim_in, dataset)
         dim_in = self.encoder.dim_in
 
         if cfg.gnn.layers_pre_mp > 0:
