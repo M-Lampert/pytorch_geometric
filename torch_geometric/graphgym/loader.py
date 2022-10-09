@@ -42,45 +42,54 @@ register.register_dataset('PubMed', planetoid_dataset('PubMed'))
 register.register_dataset('PPI', PPI)
 
 
-def load_pyg(name, dataset_dir):
+def load_pyg(arg_dict):
     """
     Load PyG dataset objects. (More PyG datasets will be supported)
 
     Args:
-        name (string): dataset name
-        dataset_dir (string): data directory
+        arg_dict (dict): Dictionary with name, dataset directory and optionally transforms
 
     Returns: PyG dataset object
 
     """
-    dataset_dir = '{}/{}'.format(dataset_dir, name)
+    name = arg_dict["name"]
+    arg_dict["root"] = '{}/{}'.format(arg_dict["root"], arg_dict["name"])
     if name in ['Cora', 'CiteSeer', 'PubMed']:
-        dataset = Planetoid(dataset_dir, name)
+        dataset = Planetoid(**arg_dict)
     elif name[:3] == 'TU_':
         # TU_IMDB doesn't have node features
         if name[3:] == 'IMDB':
-            name = 'IMDB-MULTI'
-            dataset = TUDataset(dataset_dir, name, transform=T.Constant())
+            arg_dict["name"] = 'IMDB-MULTI'
+            arg_dict["transform"] = T.Constant() if arg_dict["transform"] is None else T.Compose([arg_dict["transform"], T.Constant()])
+            dataset = TUDataset(**arg_dict)
         else:
-            dataset = TUDataset(dataset_dir, name[3:])
+            arg_dict["name"] = arg_dict["name"][3:]
+            dataset = TUDataset(**arg_dict)
     elif name == 'Karate':
         dataset = KarateClub()
     elif 'Coauthor' in name:
         if 'CS' in name:
-            dataset = Coauthor(dataset_dir, name='CS')
+            arg_dict["name"] = "CS"
+            dataset = Coauthor(**arg_dict)
         else:
-            dataset = Coauthor(dataset_dir, name='Physics')
+            arg_dict["name"] = 'Physics'
+            dataset = Coauthor(**arg_dict)
     elif 'Amazon' in name:
         if 'Computers' in name:
-            dataset = Amazon(dataset_dir, name='Computers')
+            arg_dict["name"] = 'Computers'
+            dataset = Amazon(**arg_dict)
         else:
-            dataset = Amazon(dataset_dir, name='Photo')
+            arg_dict["name"] = 'Photo'
+            dataset = Amazon(**arg_dict)
     elif name == 'MNIST':
-        dataset = MNISTSuperpixels(dataset_dir)
+        del arg_dict["name"]
+        dataset = MNISTSuperpixels(**arg_dict)
     elif name == 'PPI':
-        dataset = PPI(dataset_dir)
+        del arg_dict["name"]
+        dataset = PPI(**arg_dict)
     elif name == 'QM7b':
-        dataset = QM7b(dataset_dir)
+        del arg_dict["name"]
+        dataset = QM7b(**arg_dict)
     else:
         raise ValueError('{} not support'.format(name))
 
@@ -94,15 +103,14 @@ def set_dataset_attr(dataset, name, value, size):
         dataset.slices[name] = torch.tensor([0, size], dtype=torch.long)
 
 
-def load_ogb(name, dataset_dir):
+def load_ogb(arg_dict):
     r"""
 
     Load OGB dataset objects.
 
 
     Args:
-        name (string): dataset name
-        dataset_dir (string): data directory
+        arg_dict (dict): Dictionary with name, dataset directory and optionally transforms
 
     Returns: PyG dataset object
 
@@ -111,8 +119,8 @@ def load_ogb(name, dataset_dir):
     from ogb.linkproppred import PygLinkPropPredDataset
     from ogb.nodeproppred import PygNodePropPredDataset
 
-    if name[:4] == 'ogbn':
-        dataset = PygNodePropPredDataset(name=name, root=dataset_dir)
+    if arg_dict["name"][:4] == 'ogbn':
+        dataset = PygNodePropPredDataset(**arg_dict)
         splits = dataset.get_idx_split()
         split_names = ['train_mask', 'val_mask', 'test_mask']
         for i, key in enumerate(splits.keys()):
@@ -122,16 +130,16 @@ def load_ogb(name, dataset_dir):
         set_dataset_attr(dataset, 'edge_index', edge_index,
                          edge_index.shape[1])
 
-    elif name[:4] == 'ogbg':
-        dataset = PygGraphPropPredDataset(name=name, root=dataset_dir)
+    elif arg_dict["name"][:4] == 'ogbg':
+        dataset = PygGraphPropPredDataset(**arg_dict)
         splits = dataset.get_idx_split()
         split_names = ['train_index', 'val_index', 'test_index']
         for i, key in enumerate(splits.keys()):
             id = splits[key]
             set_dataset_attr(dataset, split_names[i], id, len(id))
 
-    elif name[:4] == "ogbl":
-        dataset = PygLinkPropPredDataset(name=name, root=dataset_dir)
+    elif arg_dict["name"][:4] == "ogbl":
+        dataset = PygLinkPropPredDataset(**arg_dict)
         splits = dataset.get_edge_split()
         id = splits['train']['edge'].T
         if cfg.dataset.resample_negative:
@@ -173,19 +181,27 @@ def load_dataset():
 
     """
     format = cfg.dataset.format
-    name = cfg.dataset.name
-    dataset_dir = cfg.dataset.dir
+    arg_dict = {
+        "name": cfg.dataset.name,
+        "root": cfg.dataset.dir
+    }
+    if len(cfg.dataset.transform) == 1:
+        arg_dict["transform"] = register.transform_dict.get(cfg.dataset.transform[0])()
+    elif len(cfg.dataset.transform) > 1:
+        transforms = [register.transform_dict.get(t)() for t in cfg.dataset.transform[0]]
+        arg_dict["transform"] = T.Compose(transforms)
     # Try to load customized data format
     for func in register.loader_dict.values():
-        dataset = func(format, name, dataset_dir)
+        dataset = func(format, **arg_dict)
         if dataset is not None:
             return dataset
     # Load from Pytorch Geometric dataset
     if format == 'PyG':
-        dataset = load_pyg(name, dataset_dir)
+        dataset = load_pyg(arg_dict)
     # Load from OGB formatted data
     elif format == 'OGB':
-        dataset = load_ogb(name.replace('_', '-'), dataset_dir)
+        arg_dict["name"] = arg_dict["name"].replace('_', '-')
+        dataset = load_ogb(arg_dict)
     else:
         raise ValueError('Unknown data format: {}'.format(format))
     return dataset
