@@ -238,9 +238,12 @@ def create_dataset():
     return dataset
 
 
-def create_loader():
+def create_loader(dataset):
     """
     Create a LightningDataset object
+
+    Args:
+        dataset (torch_geometric.data.dataset.Dataset): The dataset that should be used to create a loader.
 
     Returns: PyG LightningDataset object
 
@@ -249,7 +252,6 @@ def create_loader():
     if cfg.train.sampler == "full_batch":
         cfg.train.sampler = "full"
 
-    dataset = create_dataset()
     data = dataset.data
 
     if cfg.train.sampler not in ["full", "neighbor", "link_neighbor"]:

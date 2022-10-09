@@ -15,7 +15,7 @@ class ExampleNodeEncoder(torch.nn.Module):
         Parameters:
         num_classes - the number of classes for the embedding mapping to learn
     """
-    def __init__(self, emb_dim, num_classes=None):
+    def __init__(self, emb_dim, dataset, num_classes=None):
         super().__init__()
 
         self.encoder = torch.nn.Embedding(num_classes, emb_dim)

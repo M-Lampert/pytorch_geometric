@@ -14,11 +14,12 @@ register_network('gnn', GNN)
 
 
 class GraphGymModule(LightningModule):
-    def __init__(self, dim_in, dim_out, cfg):
+    def __init__(self, dim_in, dim_out, cfg, dataset):
         super().__init__()
         self.cfg = cfg
         self.model = network_dict[cfg.model.type](dim_in=dim_in,
-                                                  dim_out=dim_out)
+                                                  dim_out=dim_out,
+                                                  dataset=dataset)
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -63,10 +64,11 @@ class GraphGymModule(LightningModule):
         return self.model.pre_mp
 
 
-def create_model(to_device=True, dim_in=None, dim_out=None) -> GraphGymModule:
+def create_model(dataset, to_device=True, dim_in=None, dim_out=None) -> GraphGymModule:
     r"""Create model for graph machine learning.
 
     Args:
+        dataset (torch_geometric.data.dataset.Dataset): The dataset the model is trained on.
         to_device (string): The devide that the model will be transferred to
         dim_in (int, optional): Input dimension to the model
         dim_out (int, optional): Output dimension to the model
@@ -77,7 +79,7 @@ def create_model(to_device=True, dim_in=None, dim_out=None) -> GraphGymModule:
     if 'classification' in cfg.dataset.task_type and dim_out == 2:
         dim_out = 1
 
-    model = GraphGymModule(dim_in, dim_out, cfg)
+    model = GraphGymModule(dim_in, dim_out, cfg, dataset)
     if to_device:
         model.to(torch.device(cfg.accelerator))
     return model
