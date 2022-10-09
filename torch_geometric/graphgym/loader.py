@@ -185,17 +185,19 @@ def load_dataset():
         "name": cfg.dataset.name,
         "root": cfg.dataset.dir
     }
-    if len(cfg.dataset.transform) == 1:
-        arg_dict["transform"] = register.transform_dict.get(cfg.dataset.transform[0])()
-        if arg_dict["transform"] is None:
-            raise ValueError(
-                f'Transform function list contains unknown transform: {cfg.dataset.transform}')
-    elif len(cfg.dataset.transform) > 1:
-        transforms = [register.transform_dict.get(t)() for t in cfg.dataset.transform]
-        if None in transforms:
-            raise ValueError(
-                f'Transform function list contains unknown transform: {cfg.dataset.transform}')
-        arg_dict["transform"] = T.Compose(transforms)
+    if len(cfg.dataset.transform) > 0:
+        transforms = []
+        for curr_transform in cfg.dataset.transform:
+            transform_cls = register.transform_dict.get(curr_transform)
+            if transform_cls is not None:
+                transforms.append(transform_cls())
+            else:
+                raise ValueError(
+                    f'Transform function list contains unknown transform: {cfg.dataset.transform}')
+        if len(transforms) > 1:
+            arg_dict["transform"] = T.Compose(transforms)
+        else:
+            arg_dict["transform"] = transforms[0]
     # Try to load customized data format
     for func in register.loader_dict.values():
         dataset = func(format, **arg_dict)
