@@ -200,7 +200,7 @@ def load_dataset():
             arg_dict["transform"] = transforms[0]
     # Try to load customized data format
     for func in register.loader_dict.values():
-        dataset = func(format, **arg_dict)
+        dataset = func(arg_dict)
         if dataset is not None:
             return dataset
     # Load from Pytorch Geometric dataset
@@ -277,6 +277,7 @@ def create_loader(dataset):
         cfg.train.sampler = "full"
 
     data = dataset[0]
+    print(data)
 
     if cfg.train.sampler not in ["full", "neighbor", "link_neighbor"]:
         raise NotImplementedError()
