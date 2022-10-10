@@ -99,13 +99,13 @@ class FeatureEncoder(nn.Module):
             # Encode integer node features via nn.Embeddings
             NodeEncoder = register.node_encoder_dict[
                 cfg.dataset.node_encoder_name]
-            self.node_encoder = NodeEncoder(cfg.gnn.dim_inner, dataset)
+            self.node_encoder = NodeEncoder(cfg.dataset.encoder_dim, dataset)
             if cfg.dataset.node_encoder_bn:
                 self.node_encoder_bn = BatchNorm1dNode(
-                    new_layer_config(cfg.gnn.dim_inner, -1, -1, has_act=False,
+                    new_layer_config(self.node_encoder.dim_out, -1, -1, has_act=False,
                                      has_bias=False, cfg=cfg))
             # Update dim_in to reflect the new dimension fo the node features
-            self.dim_in = cfg.gnn.dim_inner
+            self.dim_in = self.node_encoder.dim_out
         if cfg.dataset.edge_encoder:
             # Encode integer edge features via nn.Embeddings
             EdgeEncoder = register.edge_encoder_dict[
