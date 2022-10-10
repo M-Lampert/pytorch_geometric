@@ -277,7 +277,6 @@ def create_loader(dataset):
         cfg.train.sampler = "full"
 
     data = dataset[0]
-    print(data)
 
     if cfg.train.sampler not in ["full", "neighbor", "link_neighbor"]:
         raise NotImplementedError()
