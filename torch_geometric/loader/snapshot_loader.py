@@ -1,42 +1,39 @@
 import torch
 
 from torch_geometric.data import Data
-from torch_geometric.utils import cumsum
 
 
 class IterableSnapshotDataset(torch.utils.data.IterableDataset):
-    def __init__(self, data, horizon, max_batch_size):
+    r"""An iterable dataset that yields snapshots of events that
+    occured in the period `[t, t+horizon-1]`
+
+    Args:
+        data (Data): The :obj:`~torch_geometric.data.Data`
+            from which to load the data.
+        horizon (int): The time horizon for each snapshot.
+    """
+    def __init__(self, data, horizon):
         self.data = data.sort_by_time()
         self.horizon = horizon
-        self.max_batch_size = max_batch_size
-        # Compute the pointers to the snapshots with maximum batch size
-        _, n_stamps_in_window = torch.unique(
-            torch.floor(self.data.time / self.horizon), return_counts=True
-        )
-        steps_per_window = torch.ceil(n_stamps_in_window / self.max_batch_size).int()
-        self.ptrs = torch.repeat_interleave(
-            cumsum(n_stamps_in_window)[:-1], steps_per_window
-        )
-        correction = torch.arange(self.ptrs.shape[0], device=self.ptrs.device)
-        correction -= torch.repeat_interleave(
-            cumsum(steps_per_window)[:-1], steps_per_window
-        )
-        self.ptrs += correction * self.max_batch_size
-        self.steps = torch.arange(self.ptrs.shape[0], device=self.ptrs.device)
-        self.ptrs = torch.cat(
-            [
-                self.ptrs,
-                torch.tensor([self.data.time.shape[0]], device=self.ptrs.device),
-            ]
+        self.num_workers = 1
+        self.worker_id = 0
+
+    def __len__(self):
+        return self.data.time.max() // self.horizon + 1
+
+    def __getitem__(self, index):
+        return self.data.snapshot(
+            start_time=index * self.horizon,
+            end_time=(index + 1) * self.horizon-1
         )
 
     def __iter__(self):
-        for i in self.steps:
-            yield self.data.edge_subgraph(
-                torch.arange(
-                    self.ptrs[i], self.ptrs[i + 1], device=self.data.edge_index.device
-                )
-            )
+        for i in range(
+            self.worker_id,
+            self.data.time.max() // self.horizon + 1,
+            self.num_workers,
+        ):
+            yield self[i]
 
 
 class SnapshotLoader(torch.utils.data.DataLoader):
@@ -47,7 +44,6 @@ class SnapshotLoader(torch.utils.data.DataLoader):
         data (Data): The :obj:`~torch_geometric.data.Data`
             from which to load the data.
         horizon (int): The time horizon for each snapshot.
-        max_batch_size (int): The maximum number of events in a batch.
         **kwargs (optional): Additional arguments of
             :class:`torch.utils.data.DataLoader`.
     """
@@ -56,7 +52,6 @@ class SnapshotLoader(torch.utils.data.DataLoader):
         self,
         data: Data,
         horizon: int,
-        max_batch_size: int = 1,
         **kwargs,
     ):
         # Remove for PyTorch Lightning:
@@ -64,20 +59,18 @@ class SnapshotLoader(torch.utils.data.DataLoader):
         kwargs.pop("collate_fn", None)
         kwargs.pop("shuffle", None)
 
-        iterable_dataset = IterableSnapshotDataset(
-            data=data, horizon=horizon, max_batch_size=max_batch_size
-        )
+        iterable_dataset = IterableSnapshotDataset(data=data, horizon=horizon)
 
-        def worker_init_fn(worker_id):
+        def _worker_init_fn(worker_id):
             worker_info = torch.utils.data.get_worker_info()
             dataset = worker_info.dataset
-            num_workers = worker_info.num_workers
-            dataset.steps = dataset.steps[worker_id::num_workers]
+            dataset.num_workers = worker_info.num_workers
+            dataset.worker_id = worker_id
 
         super().__init__(
             iterable_dataset,
             batch_size=None,
             shuffle=False,
-            worker_init_fn=worker_init_fn,
+            worker_init_fn=_worker_init_fn,
             **kwargs,
         )
