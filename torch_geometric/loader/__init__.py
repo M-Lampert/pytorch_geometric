@@ -16,6 +16,7 @@ from .zip_loader import ZipLoader
 from .data_list_loader import DataListLoader
 from .dense_data_loader import DenseDataLoader
 from .temporal_dataloader import TemporalDataLoader
+from .snapshot_loader import SnapshotLoader
 from .neighbor_sampler import NeighborSampler
 from .imbalanced_sampler import ImbalancedSampler
 from .dynamic_batch_sampler import DynamicBatchSampler
@@ -44,6 +45,7 @@ __all__ = classes = [
     'DataListLoader',
     'DenseDataLoader',
     'TemporalDataLoader',
+    'SnapshotLoader',
     'NeighborSampler',
     'ImbalancedSampler',
     'DynamicBatchSampler',
