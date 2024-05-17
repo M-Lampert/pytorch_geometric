@@ -12,25 +12,28 @@ class IterableSnapshotDataset(torch.utils.data.IterableDataset):
             from which to load the data.
         horizon (int): The time horizon for each snapshot.
     """
+
     def __init__(self, data, horizon):
         self.data = data.sort_by_time()
         self.horizon = horizon
         self.num_workers = 1
         self.worker_id = 0
+        self.time_min = int(self.data.time.min().floor())
+        self.time_max = int(self.data.time.max().ceil())
 
     def __len__(self):
-        return self.data.time.max() // self.horizon + 1
+        return (self.time_max - self.time_min) // self.horizon + 1
 
     def __getitem__(self, index):
         return self.data.snapshot(
-            start_time=index * self.horizon,
-            end_time=(index + 1) * self.horizon-1
+            start_time=self.time_min + (index * self.horizon),
+            end_time=self.time_min + ((index + 1) * self.horizon) - 1,
         )
 
     def __iter__(self):
         for i in range(
             self.worker_id,
-            self.data.time.max() // self.horizon + 1,
+            self.time_max // self.horizon + 1,
             self.num_workers,
         ):
             yield self[i]

@@ -34,3 +34,29 @@ def test_snapshot_dataloader(num_workers):
             == time[(time == i * 2) | (time == (i * 2) + 1)].tolist()
         )
         assert snapshot.num_nodes == 6
+
+    # Test time that does not start at 0
+    time = torch.tensor([100, 101, 101, 101, 102, 102, 103], dtype=torch.long)
+    data = Data(edge_index=edge_index, time=time, num_nodes=6)
+
+    loader = SnapshotLoader(data, horizon=1, num_workers=num_workers)
+    assert len(loader) == 4
+
+    for i, snapshot in enumerate(loader):
+        assert snapshot.edge_index.tolist() == edge_index[:, time == i + 100].tolist()
+        assert snapshot.time.tolist() == time[time == i + 100].tolist()
+        assert snapshot.num_nodes == 6
+
+    loader = SnapshotLoader(data, horizon=2, num_workers=num_workers)
+    assert len(loader) == 2
+
+    for i, snapshot in enumerate(loader):
+        assert (
+            snapshot.edge_index.tolist()
+            == edge_index[:, (time == (i * 2) + 100) | (time == (i * 2) + 101)].tolist()
+        )
+        assert (
+            snapshot.time.tolist()
+            == time[(time == (i * 2) + 100) | (time == (i * 2) + 101)].tolist()
+        )
+        assert snapshot.num_nodes == 6
