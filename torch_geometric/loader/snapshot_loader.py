@@ -33,7 +33,7 @@ class IterableSnapshotDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         for i in range(
             self.worker_id,
-            self.time_max // self.horizon + 1,
+            len(self),
             self.num_workers,
         ):
             yield self[i]

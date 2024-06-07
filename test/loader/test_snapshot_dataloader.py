@@ -27,36 +27,38 @@ def test_snapshot_dataloader(num_workers):
     for i, snapshot in enumerate(loader):
         assert (
             snapshot.edge_index.tolist()
-            == edge_index[:, (time == i * 2) | (time == (i * 2) + 1)].tolist()
+            == edge_index[:, (time == i * 2) | (time == ((i * 2) + 1))].tolist()
         )
         assert (
             snapshot.time.tolist()
-            == time[(time == i * 2) | (time == (i * 2) + 1)].tolist()
+            == time[(time == i * 2) | (time == ((i * 2) + 1))].tolist()
         )
         assert snapshot.num_nodes == 6
 
-    # Test time that does not start at 0
-    time = torch.tensor([100, 101, 101, 101, 102, 102, 103], dtype=torch.long)
+    # Test time that does not start at 0 and has gaps
+    time = torch.tensor([100, 101, 101, 101, 105, 105, 108], dtype=torch.long)
     data = Data(edge_index=edge_index, time=time, num_nodes=6)
 
     loader = SnapshotLoader(data, horizon=1, num_workers=num_workers)
-    assert len(loader) == 4
+    assert len(loader) == 9
 
     for i, snapshot in enumerate(loader):
-        assert snapshot.edge_index.tolist() == edge_index[:, time == i + 100].tolist()
-        assert snapshot.time.tolist() == time[time == i + 100].tolist()
+        assert snapshot.edge_index.tolist() == edge_index[:, time == (i + 100)].tolist()
+        assert snapshot.time.tolist() == time[time == (i + 100)].tolist()
         assert snapshot.num_nodes == 6
 
     loader = SnapshotLoader(data, horizon=2, num_workers=num_workers)
-    assert len(loader) == 2
+    assert len(loader) == 5
 
     for i, snapshot in enumerate(loader):
         assert (
             snapshot.edge_index.tolist()
-            == edge_index[:, (time == (i * 2) + 100) | (time == (i * 2) + 101)].tolist()
+            == edge_index[
+                :, (time == ((i * 2) + 100)) | (time == ((i * 2) + 101))
+            ].tolist()
         )
         assert (
             snapshot.time.tolist()
-            == time[(time == (i * 2) + 100) | (time == (i * 2) + 101)].tolist()
+            == time[(time == ((i * 2) + 100)) | (time == ((i * 2) + 101))].tolist()
         )
         assert snapshot.num_nodes == 6
