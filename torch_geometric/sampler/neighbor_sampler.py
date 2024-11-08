@@ -307,7 +307,7 @@ class NeighborSampler(BaseSampler):
 
     @property
     def disjoint(self) -> bool:
-        return self._disjoint or self.is_temporal
+        return self._disjoint
 
     @disjoint.setter
     def disjoint(self, disjoint: bool):
@@ -564,7 +564,6 @@ def edge_sample(
     input_type = inputs.input_type
 
     src_time = dst_time = edge_label_time
-    assert edge_label_time is None or disjoint
 
     assert isinstance(num_nodes, (dict, int))
     if not isinstance(num_nodes, dict):
