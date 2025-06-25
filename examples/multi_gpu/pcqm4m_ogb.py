@@ -1,6 +1,7 @@
 # Code adapted from OGB.
 # https://github.com/snap-stanford/ogb/tree/master/examples/lsc/pcqm4m-v2
 import argparse
+import math
 import os
 
 import torch
@@ -372,7 +373,7 @@ def train(model, rank, device, loader, optimizer):
     model.train()
     reg_criterion = torch.nn.L1Loss()
     loss_accum = 0.0
-    for step, batch in enumerate(
+    for step, batch in enumerate(  # noqa: B007
             tqdm(loader, desc="Training", disable=(rank > 0))):
         batch = batch.to(device)
         pred = model(batch).view(-1, )
@@ -433,7 +434,8 @@ def run(rank, dataset, args):
         train_idx = split_idx["train"]
 
     if num_devices > 1:
-        train_idx = train_idx.split(train_idx.size(0) // num_devices)[rank]
+        num_splits = math.ceil(train_idx.size(0) / num_devices)
+        train_idx = train_idx.split(num_splits)[rank]
 
     if args.train_subset:
         subset_ratio = 0.1

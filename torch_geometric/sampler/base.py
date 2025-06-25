@@ -1,7 +1,7 @@
 import copy
 import math
 import warnings
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
@@ -369,9 +369,10 @@ class HeteroSamplerOutput(CastMixin):
                         out.edge[edge_type] = None
 
                 else:
-                    warnings.warn(f"Cannot convert to bidirectional graph "
-                                  f"since the edge type {edge_type} does not "
-                                  f"seem to have a reverse edge type")
+                    warnings.warn(
+                        f"Cannot convert to bidirectional graph "
+                        f"since the edge type {edge_type} does not "
+                        f"seem to have a reverse edge type", stacklevel=2)
 
         return out
 
@@ -423,7 +424,15 @@ class NumNeighbors:
             elif isinstance(self.values, dict):
                 default = self.default
             else:
-                assert False
+                raise AssertionError()
+
+            # Confirm that `values` only hold valid edge types:
+            if isinstance(self.values, dict):
+                edge_types_str = {EdgeTypeStr(key) for key in edge_types}
+                invalid_edge_types = set(self.values.keys()) - edge_types_str
+                if len(invalid_edge_types) > 0:
+                    raise ValueError("Not all edge types specified in "
+                                     "'num_neighbors' exist in the graph")
 
             out = {}
             for edge_type in edge_types:
@@ -614,6 +623,7 @@ class BaseSampler(ABC):
         As such, it is recommended to limit the amount of information stored in
         the sampler.
     """
+    @abstractmethod
     def sample_from_nodes(
         self,
         index: NodeSamplerInput,
@@ -634,6 +644,7 @@ class BaseSampler(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def sample_from_edges(
         self,
         index: EdgeSamplerInput,

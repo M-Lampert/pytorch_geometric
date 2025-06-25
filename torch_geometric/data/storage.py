@@ -454,7 +454,7 @@ class NodeStorage(BaseStorage):
             f"'{set(self.keys())}'. Please explicitly set 'num_nodes' as an "
             f"attribute of " +
             ("'data'" if self._key is None else f"'data[{self._key}]'") +
-            " to suppress this warning")
+            " to suppress this warning", stacklevel=2)
         if 'edge_index' in self and isinstance(self.edge_index, Tensor):
             if self.edge_index.numel() > 0:
                 return int(self.edge_index.max()) + 1
@@ -806,6 +806,10 @@ class GlobalStorage(NodeStorage, EdgeStorage):
             return False
 
         cat_dim = self._parent().__cat_dim__(key, value, self)
+
+        if not isinstance(cat_dim, int):
+            return False
+
         num_nodes, num_edges = self.num_nodes, self.num_edges
 
         if value.shape[cat_dim] != num_nodes:
@@ -852,6 +856,10 @@ class GlobalStorage(NodeStorage, EdgeStorage):
             return False
 
         cat_dim = self._parent().__cat_dim__(key, value, self)
+
+        if not isinstance(cat_dim, int):
+            return False
+
         num_nodes, num_edges = self.num_nodes, self.num_edges
 
         if value.shape[cat_dim] != num_edges:

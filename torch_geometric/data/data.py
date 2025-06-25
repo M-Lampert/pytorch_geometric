@@ -354,7 +354,7 @@ class BaseData:
         """
         return self.apply(lambda x: x.contiguous(), *args)
 
-    def to(self, device: Union[int, str], *args: str,
+    def to(self, device: Union[int, str, torch.device], *args: str,
            non_blocking: bool = False):
         r"""Performs tensor device conversion, either for all attributes or
         only the ones given in :obj:`*args`.
@@ -659,7 +659,13 @@ class Data(BaseData, FeatureStore, GraphStore):
                 return value.get_dim_size()
             return int(value.max()) + 1
         elif 'index' in key or key == 'face':
-            return self.num_nodes
+            num_nodes = self.num_nodes
+            if num_nodes is None:
+                raise RuntimeError(f"Unable to infer 'num_nodes' from the "
+                                   f"attribute '{key}'. Please explicitly set "
+                                   f"'num_nodes' as an attribute of 'data' to "
+                                   f"prevent this error")
+            return num_nodes
         else:
             return 0
 
@@ -844,14 +850,14 @@ class Data(BaseData, FeatureStore, GraphStore):
         # that maps global node indices to local ones in the final
         # heterogeneous graph:
         node_ids, index_map = {}, torch.empty_like(node_type)
-        for i, key in enumerate(node_type_names):
+        for i in range(len(node_type_names)):
             node_ids[i] = (node_type == i).nonzero(as_tuple=False).view(-1)
             index_map[node_ids[i]] = torch.arange(len(node_ids[i]),
                                                   device=index_map.device)
 
         # We iterate over edge types to find the local edge indices:
         edge_ids = {}
-        for i, key in enumerate(edge_type_names):
+        for i in range(len(edge_type_names)):
             edge_ids[i] = (edge_type == i).nonzero(as_tuple=False).view(-1)
 
         data = HeteroData()
@@ -1187,4 +1193,4 @@ def warn_or_raise(msg: str, raise_on_error: bool = True):
     if raise_on_error:
         raise ValueError(msg)
     else:
-        warnings.warn(msg)
+        warnings.warn(msg, stacklevel=2)
