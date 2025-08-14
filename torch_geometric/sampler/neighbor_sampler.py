@@ -639,13 +639,13 @@ def edge_sample(
         seed_time_dict = None
         if input_type[0] != input_type[-1]:  # Two distinct node types:
 
-            if not disjoint:
+            if not disjoint and edge_label_time is None:
                 src, inverse_src = src.unique(return_inverse=True)
                 dst, inverse_dst = dst.unique(return_inverse=True)
 
             seed_dict = {input_type[0]: src, input_type[-1]: dst}
 
-            if edge_label_time is not None:  # Always disjoint.
+            if edge_label_time is not None:
                 seed_time_dict = {
                     input_type[0]: src_time,
                     input_type[-1]: dst_time,
@@ -655,12 +655,12 @@ def edge_sample(
 
             seed = torch.cat([src, dst], dim=0)
 
-            if not disjoint:
+            if not disjoint and edge_label_time is None:
                 seed, inverse_seed = seed.unique(return_inverse=True)
 
             seed_dict = {input_type[0]: seed}
 
-            if edge_label_time is not None:  # Always disjoint.
+            if edge_label_time is not None:
                 seed_time_dict = {
                     input_type[0]: torch.cat([src_time, dst_time], dim=0),
                 }
@@ -733,10 +733,10 @@ def edge_sample(
         seed = torch.cat([src, dst], dim=0)
         seed_time = None
 
-        if not disjoint:
+        if not disjoint and edge_label_time is None:
             seed, inverse_seed = seed.unique(return_inverse=True)
 
-        if edge_label_time is not None:  # Always disjoint.
+        if edge_label_time is not None:
             seed_time = torch.cat([src_time, dst_time])
 
         out = sample_fn(seed, seed_time)
