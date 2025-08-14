@@ -673,7 +673,7 @@ def edge_sample(
                 out.batch[key] = batch % num_pos
 
         if neg_sampling is None or neg_sampling.is_binary():
-            if disjoint:
+            if disjoint or edge_label_time is not None:
                 if input_type[0] != input_type[-1]:
                     edge_label_index = torch.arange(num_pos + num_neg)
                     edge_label_index = edge_label_index.repeat(2).view(2, -1)
@@ -692,7 +692,7 @@ def edge_sample(
             out.metadata = (input_id, edge_label_index, edge_label, src_time)
 
         elif neg_sampling.is_triplet():
-            if disjoint:
+            if disjoint or edge_label_time is not None:
                 src_index = torch.arange(num_pos)
                 if input_type[0] != input_type[-1]:
                     dst_pos_index = torch.arange(num_pos)
@@ -743,7 +743,7 @@ def edge_sample(
 
         # Enhance `out` by label information ##################################
         if neg_sampling is None or neg_sampling.is_binary():
-            if disjoint:
+            if disjoint or edge_label_time is not None:
                 out.batch = out.batch % num_pos
                 edge_label_index = torch.arange(seed.numel()).view(2, -1)
             else:
@@ -752,7 +752,7 @@ def edge_sample(
             out.metadata = (input_id, edge_label_index, edge_label, src_time)
 
         elif neg_sampling.is_triplet():
-            if disjoint:
+            if disjoint or edge_label_time is not None:
                 out.batch = out.batch % num_pos
                 src_index = torch.arange(num_pos)
                 dst_pos_index = torch.arange(num_pos, 2 * num_pos)
